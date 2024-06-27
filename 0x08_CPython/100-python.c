@@ -1,7 +1,9 @@
 #include <Python.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#define MAX_SIZE 15
+#define MAX_DIGITS 1024  // Define a limit for digits
 
 /**
  * print_python_int - program that prints the integer value of a Python integer object
@@ -13,51 +15,58 @@
  * @p: a PyObject pointer, expected to point to a Python integer object
  * Return: nothing (void)
  */
-
 void print_python_int(PyObject *p)
 {
-	unsigned long int num = 0;
-	int size, i, size_bk;
+    if (!PyLong_Check(p))
+    {
+        printf("Invalid Int Object\n");
+        fflush(stdout);
+        return;
+    }
 
-	if (PyLong_Check(p))
-	{
-		size = (int) ((PyVarObject *)p)->ob_size;
-		size_bk = size;
+    int size = (int) ((PyVarObject *)p)->ob_size;
+    int is_negative = size < 0;
+    int abs_size = is_negative ? -size : size;
 
-		if (size == 0)
-		{
-			printf("%d\n", 0), fflush(stdout);
-			return;
-		}
-		if (size == 1)
-		{
-			printf("%lu\n", (unsigned long int)((PyLongObject *)p)->ob_digit[0]);
-			fflush(stdout);
-			return;
-		}
-		if (size < 0)
-			size_bk = -size;
+    if (abs_size == 0)
+    {
+        printf("0\n");
+        fflush(stdout);
+        return;
+    }
 
-		for (i = 0; i < size_bk; i++)
-		{
-			num += ((PyLongObject *)p)->ob_digit[i] * (1UL << (PyLong_SHIFT * i));
+    // Allocate enough space for the result string
+    char result[MAX_DIGITS];
+    result[0] = '\0';
 
-			if (size_bk > 3 || (size == 3 && num == 0))
-			{
-				printf("C unsigned long int overflow\n");
-				fflush(stdout);
-				return;
-			}
-		}
-		if (size < 0)
-			printf("-");
+    for (int i = abs_size - 1; i >= 0; i--)
+    {
+        char digit_str[32];
+        sprintf(digit_str, "%lu", (unsigned long int)((PyLongObject *)p)->ob_digit[i]);
+        if (i == abs_size - 1)
+        {
+            // First digit: append directly
+            strcpy(result, digit_str);
+        }
+        else
+        {
+            // Pad with zeros and append
+            int pad_zeros = PyLong_SHIFT / 4;
+            char padded_digit[32];
+            snprintf(padded_digit, sizeof(padded_digit), "%0*lu", pad_zeros, (unsigned long int)((PyLongObject *)p)->ob_digit[i]);
+            strcat(result, padded_digit);
+        }
+    }
 
-		printf("%lu\n", num);
-		fflush(stdout);
-	}
-	else
-	{
-		printf("Invalid Int Object\n");
-		fflush(stdout);
-	}
+    // Print the result
+    if (is_negative)
+    {
+        printf("-%s\n", result);
+    }
+    else
+    {
+        printf("%s\n", result);
+    }
+
+    fflush(stdout);
 }
