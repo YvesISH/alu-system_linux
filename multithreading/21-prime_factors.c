@@ -1,6 +1,6 @@
-// prime_factors.c
-#include "list.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include "list.h"
 
 /**
  * prime_factors - factors a number into a list of prime factors
@@ -30,5 +30,31 @@ list_t *prime_factors(char const *s) {
         list_add(list, (void *)tmp);
     }
     return (list);
+}
+
+static void print_factors(char const *s, list_t const *factors) {
+    list_node_t *current = factors->head;
+    printf("Prime factors of %s: ", s);
+    while (current != NULL) {
+        printf("%lu ", *(unsigned long *)current->data);
+        current = current->next;
+    }
+    printf("\n");
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s number...\n", argv[0]);
+        return 1;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        list_t *factors = prime_factors(argv[i]);
+        print_factors(argv[i], factors);
+        list_destroy(factors);
+        free(factors);
+    }
+
+    return 0;
 }
 

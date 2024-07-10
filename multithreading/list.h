@@ -1,4 +1,3 @@
-// list.h
 #ifndef LIST_H
 #define LIST_H
 
@@ -14,5 +13,7 @@ typedef struct {
 
 void list_init(list_t *list);
 void list_add(list_t *list, void *data);
+void list_destroy(list_t *list);
 
 #endif // LIST_H
+
