@@ -1,130 +1,107 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "multithreading.h"
 
-/**
- * load_kernel - Load convolution kernel from a file
- *
- * @kernel: Pointer to the kernel structure to fill in
- * @file:   Path to the file to parse
- */
-void load_kernel(kernel_t *kernel, char const *file)
-{
-    FILE *f;
-    size_t i, j;
+#define min(a, b) (a < b ? a : b)
+#define num_pixels(img) (img->w * img->h)
+#define portion_start_index(p) ((p)->y * (p)->img->w + (p)->x)
+#define portion_end_index(p) (((p)->y + (p)->h) * (p)->img->w)
 
-    f = fopen(file, "r");
-    fscanf(f, "%lu\n", &kernel->size);
-    printf("Kernel size -> %lu\n", kernel->size);
-    kernel->matrix = malloc(kernel->size * sizeof(float *));
-    for (i = 0; i < kernel->size; i++)
-    {
-        kernel->matrix[i] = malloc(kernel->size * sizeof(float));
-        for (j = 0; j < kernel->size; j++)
-            fscanf(f, "%f", &kernel->matrix[i][j]);
-    }
-    fclose(f);
+void blur_pixel(blur_portion_t const *portion, size_t target_i);
+
+int is_neighbor(blur_portion_t const *portion, int neighbor_i,
+size_t target_i);
+
+/**
+* blur_portion - blurs a portion of an image using Gaussian Blur
+* @portion: pointer to data structure describing an image portion
+**/
+void blur_portion(blur_portion_t const *portion)
+{
+	size_t row, col, i, end;
+
+	end = min(portion_end_index(portion), num_pixels(portion->img));
+
+	for (row = portion_start_index(portion); row < end; row += portion->img->w)
+	{
+		for (col = 0; col < portion->w; col++)
+		{
+			i = row + col;
+			if (col && i % portion->img->w == 0)
+				break;
+			blur_pixel(portion, i);
+		}
+	}
 }
 
 /**
- * load_image - Load an image from a PBM file
- *
- * @img:  Pointer to the image structure to fill in
- * @file: Path to the file to parse
- */
-void load_image(img_t *img, char const *file)
+* blur_pixel - applies Gaussian Blur to one pixel
+*
+* @portion: pointer to struct describing portion of image
+* @target_i: index of pixel to blur
+*/
+void blur_pixel(blur_portion_t const *portion, size_t target_i)
 {
-    FILE *f;
-    size_t i;
+	float r = 0, g = 0, b = 0, sum = 0, weight;
 
-    f = fopen(file, "r");
-    fscanf(f, "P6\n %lu %lu 255\n", &img->w, &img->h);
-    printf("Image size -> %lu * %lu\n", img->w, img->h);
-    img->pixels = malloc(img->w * img->h * sizeof(*img->pixels));
+	pixel_t *pixel;
+	int neighbor_i;
 
-    for (i = 0; i < img->w * img->h; i++)
-        fscanf(f, "%c%c%c", &img->pixels[i].r, &img->pixels[i].g, &img->pixels[i].b);
-    fclose(f);
+	size_t i, j;
+
+	neighbor_i = target_i - (portion->kernel->size / 2) * (1 + portion->img->w);
+
+	for (i = 0; i < portion->kernel->size; i++)
+	{
+		for (j = 0; j < portion->kernel->size; j++)
+			if (is_neighbor(portion, neighbor_i + j, target_i))
+			{
+				pixel = &(portion->img->pixels[neighbor_i + j]);
+				weight = portion->kernel->matrix[i][j];
+				r += pixel->r * weight;
+				g += pixel->g * weight;
+				b += pixel->b * weight;
+				sum += weight;
+			}
+
+		neighbor_i += portion->img->w;
+	}
+
+	pixel = &(portion->img_blur->pixels[target_i]);
+	pixel->r = (int)(r / sum);
+	pixel->g = (int)(g / sum);
+	pixel->b = (int)(b / sum);
 }
 
-/**
- * img_copy - Copy an image structure
- *
- * @dest: Pointer to the image structure to fill in
- * @src:  Pointer to the image structure to copy
- */
-void img_copy(img_t *dest, img_t const *src)
-{
-    size_t nb_pixels = src->w * src->h;
-
-    dest->w = src->w;
-    dest->h = src->h;
-    dest->pixels = malloc(nb_pixels * sizeof(pixel_t));
-    memcpy(dest->pixels, src->pixels, nb_pixels * sizeof(pixel_t));
-}
 
 /**
- * write_image - Write an image into a PBM file
- *
- * @img:  Pointer to the image structure to write into a file
- * @file: Path to the file to write the image into
- */
-void write_image(img_t const *img, char const *file)
+* is_neighbor - validates that a pixel array index `neigbor i` is truly a
+*               neighbor of pixel array index `target_it`
+*
+* @portion: pointer to struct describing portion of image we are on
+* @neighbor_i: candidate for index of neighbor of target pixel
+* @target_i: index of target pixel
+* Return: 1 if true, 0 if false
+*/
+int is_neighbor(blur_portion_t const *portion, int neighbor_i, size_t target_i)
 {
-    FILE *f;
-    size_t i;
+	int target_col, neighbor_col, kernel_size = (int)portion->kernel->size;
 
-    f = fopen(file, "w");
-    fprintf(f, "P6\n %lu %lu 255\n", img->w, img->h);
-    for (i = 0; i < img->w * img->h; i++)
-        fprintf(f, "%c%c%c", img->pixels[i].r, img->pixels[i].g, img->pixels[i].b);
-    fclose(f);
-}
+	int num_pixels = portion->img->h * portion->img->w;
 
-/**
- * main - Entry point
- *
- * @ac: Arguments counter
- * @av: Arguments vector
- *
- * Return: EXIT_SUCCESS upon success, error code upon failure
- */
-int main(int ac, char **av)
-{
-    img_t img, img_blur;
-    kernel_t kernel;
-    blur_portion_t portion;
-    size_t i;
+	int row_size = (int)portion->img->w;
 
-    if (ac < 3)
-    {
-        printf("Usage: %s image.ppm kernel.knl\n", av[0]);
-        return (EXIT_FAILURE);
-    }
+	/* return false if neighbor_i is not a valid index value */
+	if (neighbor_i < 0 || neighbor_i >= num_pixels)
+		return (0);
 
-    load_image(&img, av[1]);
-    img_copy(&img_blur, &img);
-    load_kernel(&kernel, av[2]);
+	/* cases where target_i lies near image boundary */
+	target_col = (int)(target_i % row_size);
+	neighbor_col = (int)(neighbor_i % row_size);
 
-    /* Execute blur */
-    portion.img = &img;
-    portion.img_blur = &img_blur;
-    portion.kernel = &kernel;
-    portion.w = img.w / 2;
-    portion.h = img.h / 2;
-    portion.x = img.w / 4;
-    portion.y = img.h / 4;
-    blur_portion(&portion);
+	if (target_col - (kernel_size / 2) < 0)
+		return (neighbor_col + (kernel_size / 2) < row_size);
 
-    write_image(&img_blur, "output.pbm");
+	if (target_col + (kernel_size / 2) >= row_size)
+		return (neighbor_col - (kernel_size / 2) >= 0);
 
-    /* Cleanup */
-    free(img.pixels);
-    free(img_blur.pixels);
-    for (i = 0; i < kernel.size; i++)
-        free(kernel.matrix[i]);
-    free(kernel.matrix);
-
-    return (EXIT_SUCCESS);
+	return (1);
 }
