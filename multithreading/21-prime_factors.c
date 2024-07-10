@@ -43,12 +43,13 @@ static void print_factors(char const *s, list_t const *factors) {
 }
 
 int main(int argc, char **argv) {
+    int i;
     if (argc < 2) {
         fprintf(stderr, "Usage: %s number...\n", argv[0]);
         return 1;
     }
 
-    for (int i = 1; i < argc; ++i) {
+    for (i = 1; i < argc; ++i) {
         list_t *factors = prime_factors(argv[i]);
         print_factors(argv[i], factors);
         list_destroy(factors);
