@@ -127,5 +127,13 @@ void *exec_tasks(list_t const *tasks);
 task_status_t get_task_status(task_t *task);
 void set_task_status(task_t *task, task_status_t status);
 void *exec_task(task_t *task);
+
+
+/* task 6 */
+void initTaskStatusMutex(void);
+void destroyTaskStatusMutex(void);
+task_t *create_task(task_entry_t entry, void *param);
+void destroy_task(task_t *task);
+void *exec_tasks(list_t const *tasks);
 #endif /*MULTITHREADING_H*/
 
