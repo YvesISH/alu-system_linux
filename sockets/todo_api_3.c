@@ -79,7 +79,7 @@ int accept_recv(int serv_fd, char *buffer, int verbose)
         return -1;
     }
 
-    buffer[bytes_received] = '\0'; // Null-terminate the received message
+    buffer[bytes_received] = '\0'; /* Null-terminate the received message */
 
     if (verbose)
         printf("Received message:\n%s\n", buffer);
