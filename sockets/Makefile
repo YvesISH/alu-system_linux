@@ -1,23 +1,34 @@
 CC = gcc
-CFLAGS = -Wall -Werror -Wextra -pedantic
+CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu89 -g3
 
-TASK0 = todo_api_0
-TASK1 = todo_api_1
-TASK2 = todo_api_2
+SRC = $(wildcard *.c)
+OBJS = $(patsubst %.c, %.o, $(SRC))
+0 = $(patsubst %.c, %.o, $(wildcard todo_api_0.c)) sockets.c
+1 = $(patsubst %.c, %.o, $(wildcard todo_api_1.c)) sockets.c
+2 = $(patsubst %.c, %.o, $(wildcard todo_api_2.c)) sockets.c
+3 = $(patsubst %.c, %.o, $(wildcard todo_api_3.c)) sockets.c
+4 = $(patsubst %.c, %.o, $(wildcard todo_api_4.c)) sockets.c response.c
+5 = $(patsubst %.c, %.o, $(wildcard todo_api_5.c)) sockets.c response.c
 
-$(TASK0): $(TASK0).c sockets_http.h server.c
-	$(CC) $(CFLAGS) -o $@ $^
+.PHONY: todo_api_0 todo_api_1 todo_api_2 todo_api_3 todo_api_4 todo_api_5 clean
 
-$(TASK1): $(TASK1).c sockets_http.h server.c
-	$(CC) $(CFLAGS) -o $@ $^
+todo_api_0: $(0)
+	$(CC) $(CFLAGS) $(0) -o todo_api_0
 
-$(TASK2): $(TASK2).c sockets_http.h server.c
-	$(CC) $(CFLAGS) -o $@ $^
+todo_api_1: $(1)
+	$(CC) $(CFLAGS) $(1) -o todo_api_1
 
-.PHONY: clean run
+todo_api_2: $(2)
+	$(CC) $(CFLAGS) $(2) -o todo_api_2
+
+todo_api_3: $(3)
+	$(CC) $(CFLAGS) $(3) -o todo_api_3
+
+todo_api_4: $(4)
+	$(CC) $(CFLAGS) $(4) -o todo_api_4
+
+todo_api_5: $(5)
+	$(CC) $(CFLAGS) $(5) -o todo_api_5
 
 clean:
-	rm $(TASK0) $(TASK1) $(TASK2)
-
-betty:
-	betty *.c *.h
+	rm -f $(OBJS) todo_api_0 todo_api_1 todo_api_2 todo_api_3 todo_api_4 todo_api_5
